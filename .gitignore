@@ -6,7 +6,6 @@ __pycache__/
 chroma_db/
 *.db
 .env
-report.json
 Complete Training Set/
 Homework_support/
 data/
