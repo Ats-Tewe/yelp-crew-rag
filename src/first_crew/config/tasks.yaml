@@ -1,0 +1,43 @@
+analyze_user_task:
+  description: >
+    Use your search tools to find all information about the user with user_id: {user_id}.
+    Search the user database for their profile, average_stars, elite status, and review count.
+    Then search the review database for their past reviews to understand their writing style,
+    vocabulary, topics they care about, and whether they tend to rate strictly or leniently.
+    Compile a comprehensive Markdown report covering all findings.
+  expected_output: >
+    A comprehensive Markdown report about the user including: average rating tendency,
+    writing style, key topics they care about, elite status, and sample past reviews.
+  agent: user_profiler
+
+analyze_item_task:
+  description: >
+    Use your search tool to find all information about the business with item_id: {item_id}.
+    Search the item database for the business name, category, overall star rating, review count,
+    location, and all attributes (noise level, price range, ambiance, parking, etc.).
+    Compile a detailed Markdown evaluation report of this business.
+  expected_output: >
+    A detailed Markdown report about the business including: name, category, overall rating,
+    key strengths, common complaints, and notable attributes.
+  agent: item_analyst
+
+predict_review_task:
+  description: >
+    You will receive a user profile report and a business evaluation report from your colleagues.
+    Synthesize both reports to predict what star rating and review text this specific user
+    would write for this specific business.
+
+    Critical rules:
+    1. Calibrate the star rating to the USER's personal rating tendencies (use their
+       average_stars as the primary signal, not the business overall average).
+    2. Write the review in the user's typical vocabulary and style.
+    3. Your ENTIRE response must be ONLY a valid JSON object with exactly two fields.
+    4. Do not include any text, markdown, or explanation outside the JSON object.
+
+    Required output format:
+    {"stars": <number 1.0-5.0>, "review": "<review text>"}
+  expected_output: >
+    A valid JSON object with exactly two fields: "stars" (a number from 1.0 to 5.0)
+    and "review" (a string containing the predicted review text).
+    Example: {"stars": 4.0, "review": "Great food, friendly staff, a bit noisy..."}
+  agent: prediction_modeler
