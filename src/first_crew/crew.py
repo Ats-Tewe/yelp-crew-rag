@@ -8,13 +8,18 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parents[3] / ".env", override=T
 # Bypass CrewAI's forced OpenAI key check
 os.environ["OPENAI_API_KEY"] = "NA"
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from crewai import Agent, Task, Crew, Process, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import JSONSearchTool
+from crewai.knowledge.source.markdown_knowledge_source import MarkdownKnowledgeSource
 
 # --- LLM: Ollama phi3 locally ---
 llm = LLM(model="ollama/phi3", base_url="http://localhost:11434")
+
+# --- Knowledge Source: Yelp field glossary shared by all agents ---
+knowledge_source = MarkdownKnowledgeSource(
+    file_paths=["docs/Yelp_Data_Translation.md"]
+)
 
 # --- RAG config: instructor's exact format ---
 rag_config = {
@@ -105,5 +110,6 @@ class FirstCrew():
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
+            knowledge_sources=[knowledge_source],
             verbose=True
         )
