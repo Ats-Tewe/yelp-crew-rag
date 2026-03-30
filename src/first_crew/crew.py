@@ -11,16 +11,16 @@ os.environ["OPENAI_API_KEY"] = "NA"
 from crewai import Agent, Task, Crew, Process, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import JSONSearchTool
-from crewai.knowledge.source.markdown_knowledge_source import MarkdownKnowledgeSource
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 
 # --- LLM: Ollama phi3 locally ---
 llm = LLM(model="ollama/phi3", base_url="http://localhost:11434")
 
 # --- Knowledge Source: Yelp field glossary shared by all agents ---
-knowledge_source = MarkdownKnowledgeSource(
-    file_paths=["docs/Yelp_Data_Translation.md"]
-)
+with open("docs/Yelp_Data_Translation.md", "r", encoding="utf-8") as f:
+    yelp_md = f.read()
 
+knowledge_source = StringKnowledgeSource(content=yelp_md)
 # --- RAG config: instructor's exact format ---
 rag_config = {
     "embedding_model": {
