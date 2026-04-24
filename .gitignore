@@ -1,11 +1,27 @@
+# --- Python / venv --------------------------------------------------------
 .venv/
 venv/
 __pycache__/
 *.pyc
+
+# --- CrewAI / ChromaDB storage -------------------------------------------
+# The 4.7 GB chroma_index ships as a separate download (see README §Setup).
 .chroma/
 chroma_db/
+chroma_index/
 *.db
+
+# --- Secrets --------------------------------------------------------------
 .env
+
+# --- Gitignored datasets --------------------------------------------------
+# The full Yelp training set (~420 MB) is not committed. README documents
+# where to place these files. The small data/ subsets ARE committed so
+# the repo clones runnable out-of-the-box.
 Complete Training Set/
 Homework_support/
-uv.lock
+
+# --- Run artefacts that shouldn't be tracked -----------------------------
+results/*.log
+results/predictions.jsonl.*
+results/*.bak

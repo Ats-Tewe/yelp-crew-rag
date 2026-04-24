@@ -1,0 +1,7 @@
+{
+  "n_total": 50,
+  "n_ok": 50,
+  "success_rate": 1.0,
+  "mae_stars": 0.71,
+  "text_cosine_mean": 0.7974
+}

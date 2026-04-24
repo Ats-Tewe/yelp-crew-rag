@@ -21,6 +21,231 @@ analyze_item_task:
     key strengths, common complaints, and notable attributes.
   agent: item_analyst
 
+# --- Flow variants: the record is pre-fetched by the Flow (primary-key lookup
+# in data_store.py) and injected here as JSON. No search tools are needed or used.
+
+analyze_user_task_flow:
+  description: >
+    You are given a Yelp user's profile record and a list of their most recent past
+    reviews. Analyse this data and write a comprehensive Markdown profile of the user.
+
+    USER RECORD (JSON):
+    {user_record_json}
+
+    PAST REVIEWS (JSON, most recent first):
+    {past_reviews_json}
+
+    ABSOLUTE RULE — DO NOT HALLUCINATE:
+    - If USER RECORD is the empty object `{}` OR lacks an `average_stars` field,
+      output EXACTLY the following one-line report and stop immediately:
+      `**User data unavailable** — no record in the subset for the requested user_id.
+      Downstream prediction must fall back to the global average (3.75 stars) and a
+      neutral review style.`
+    - If PAST REVIEWS is `[]`, explicitly write a section titled
+      `## Past Reviews` containing the single sentence:
+      `No past reviews available for this user; style inference is impossible.`
+      Do NOT invent example reviews.
+    - You may ONLY reference facts that appear literally inside the JSON above.
+      Do not name specific restaurants, cities, or dishes unless they are
+      quoted verbatim in the PAST REVIEWS text.
+
+    Fields to pay attention to (only when the record is non-empty):
+    - average_stars: the user's typical rating across all businesses (1.0-5.0). Below 3.5
+      suggests a strict critic; above 4.0 suggests a lenient reviewer.
+    - elite: years the user held Yelp Elite status. A non-empty list means a trusted,
+      experienced reviewer.
+    - review_count: how prolific they are.
+    - yelping_since: how long they have been on the platform.
+    - In the past reviews, examine text style, tone, vocabulary, sentence length, and
+      which topics come up most often (food quality, service, price, ambience, etc.).
+  expected_output: >
+    A Markdown report covering: average rating tendency (strict / lenient / balanced),
+    writing style, favourite topics, elite status, tenure on Yelp, and 2-3 representative
+    past-review snippets.
+  agent: user_profiler
+
+analyze_item_task_flow:
+  description: >
+    You are given a Yelp business's record. Extract a detailed profile of the business
+    including its strengths, likely customer experience, and notable attributes.
+
+    ITEM RECORD (JSON):
+    {item_record_json}
+
+    ABSOLUTE RULE — DO NOT HALLUCINATE:
+    - If ITEM RECORD is the empty object `{}` OR lacks a `name` field,
+      output EXACTLY the following one-line report and stop immediately:
+      `**Item data unavailable** — no record in the subset for the requested item_id.
+      Downstream prediction must rely on the user profile alone and avoid naming
+      any specific dishes, cuisine, location, or business attributes.`
+    - You may ONLY reference facts that appear literally inside the JSON above.
+      Do not invent a business name, cuisine type, city, address, menu items,
+      or nearby landmarks. If a field is absent, say so; do not guess.
+
+    Fields to pay attention to (only when the record is non-empty):
+    - stars: the business's overall average rating (1.0-5.0).
+    - review_count: how popular / well-known the business is.
+    - categories: cuisine type and business tags.
+    - attributes: a nested dict that may include RestaurantsPriceRange2 (price bracket),
+      NoiseLevel, GoodForKids, BusinessParking, RestaurantsReservations, WiFi, and others.
+      Mention anything notable.
+    - city / state / address: location.
+    - hours: operating hours, if they reveal anything (e.g., late-night).
+  expected_output: >
+    A Markdown report covering: business name, categories, overall rating, price range,
+    ambience / noise, location, and any other notable attributes.
+  agent: item_analyst
+
+# Flow + RAG variant of analyze_item_task_flow: same record-injection contract,
+# but the agent now has a `search_historical_reviews` tool and is told when to
+# use it. Active only when RAG_ENABLED=1 in .env.
+analyze_item_task_flow_rag:
+  description: >
+    You are given a Yelp business's record. Extract a detailed profile of the business
+    including its strengths, likely customer experience, and notable attributes.
+
+    ITEM RECORD (JSON):
+    {item_record_json}
+
+    ABSOLUTE RULE — DO NOT HALLUCINATE:
+    - If ITEM RECORD is the empty object `{}` OR lacks a `name` field,
+      output EXACTLY the following one-line report and stop immediately:
+      `**Item data unavailable** — no record in the subset for the requested item_id.
+      Downstream prediction must rely on the user profile alone and avoid naming
+      any specific dishes, cuisine, location, or business attributes.`
+    - You may ONLY reference facts that appear literally inside the JSON above
+      OR inside the historical reviews returned by your `search_historical_reviews`
+      tool. Do not invent a business name, cuisine, city, address, menu items,
+      or nearby landmarks.
+
+    Tool usage policy (search_historical_reviews):
+    - You may call the tool AT MOST ONCE.
+    - Call it only if the ITEM RECORD lacks specific menu items, signature dishes,
+      service style, or other concrete details that would help downstream prediction.
+    - Construct ONE focused natural-language query that combines the business name,
+      its categories, and its city — e.g. "Pho Street Vietnamese pho summer rolls
+      Philadelphia service speed" — to retrieve semantically similar past reviews.
+    - Treat the returned reviews as background context only. Do not quote them
+      verbatim. Do not invent facts that aren't supported by either the ITEM RECORD
+      or the retrieved reviews.
+
+    Fields to pay attention to in the record (only when non-empty):
+    - stars: the business's overall average rating (1.0-5.0).
+    - review_count: how popular / well-known the business is.
+    - categories: cuisine type and business tags.
+    - attributes: a nested dict with RestaurantsPriceRange2, NoiseLevel, GoodForKids,
+      BusinessParking, RestaurantsReservations, WiFi, etc. Mention anything notable.
+    - city / state / address: location.
+    - hours: operating hours, if they reveal anything.
+  expected_output: >
+    A Markdown report covering: business name, categories, overall rating, price range,
+    ambience / noise, location, any other notable attributes, and (if you searched)
+    a short paragraph titled `## What past reviewers say` summarising the retrieved
+    review snippets in your own words.
+  agent: item_analyst
+
+# Calibration task (Lab Task 4). Runs AFTER the User Profiler and BEFORE the
+# Prediction Modeler. The agent is given a natural-language brief describing
+# the user; it must query the historical-review corpus twice to find the
+# user's most extreme past reviews, then emit a short structured calibration
+# report. Keep the tool policy tight — two calls max, cap total tokens.
+calibrate_user_task_flow:
+  description: >
+    You are calibrating the rating prior for a specific Yelp user.
+
+    USER RECORD (JSON):
+    {user_record_json}
+
+    EXTREME PAST REVIEWS (pre-computed top-3 most negative AND top-3 most
+    positive by absolute distance from the user's average_stars):
+    {extreme_reviews_json}
+
+    Your job is simple: look at the user record and the extreme reviews,
+    then write a Markdown calibration report. You have NO TOOLS to call —
+    every piece of evidence you need is already in the inputs above.
+
+    STEP 1. Classify the user as Strict / Balanced / Lenient using their
+    `average_stars` and EDA §3 thresholds (≤ 3.0 = Strict, 3.0-4.0 =
+    Balanced, ≥ 4.0 = Lenient).
+
+    STEP 2. From the extreme_reviews_json, pick up to 2 most-negative and
+    up to 2 most-positive reviews. Quote ≤ 20 words from each.
+
+    STEP 3. Compute:
+    - expected_range: a half-star inclusive range covering where this user
+      MOST OFTEN rates restaurants like the one being predicted. Skew the
+      range toward their bucket. E.g. a Strict user's range might be
+      1.5-3.0; a Lenient user's range might be 4.0-5.0.
+    - most_likely_rating: a single best-guess number inside expected_range.
+    - confidence: LOW / MEDIUM / HIGH based on how consistent their
+      extremes are with their average_stars.
+
+    STEP 4. Write your FINAL ANSWER as plain Markdown (no JSON, no code
+    fences, no tool calls). Follow the exact section structure specified
+    in "expected_output" below.
+
+    COLD-START RULE: If `user_record_json` is `{}` or lacks `average_stars`,
+    emit ONLY this one-line Final Answer (no sections): `**Calibration
+    unavailable** — user cold-start; downstream prediction must rely on
+    global priors (EDA knowledge source).`
+  expected_output: >
+    A Markdown report (plain text, no fences) with exactly four sections:
+
+    ## Calibration Summary
+    One paragraph stating the user's Strict/Balanced/Lenient bucket from
+    EDA §3, their average_stars from the user record, and the computed
+    expected_range / most_likely_rating / confidence.
+
+    ## Evidence — Most Negative
+    Up to 2 bullet points, each with the stars count and a ≤20-word quoted
+    snippet from a retrieved review. If no clearly negative review was
+    found, say so in one line.
+
+    ## Evidence — Most Positive
+    Same format as above.
+
+    ## Rating Prior for the Prediction Modeler
+    Exactly one sentence naming the expected_range and most_likely_rating
+    you computed, e.g. "Predict within 1.5-3.0; lean 2.0 unless the item
+    profile gives clear contrary evidence."
+  agent: calibrator
+
+# --- Lab Task 1: Process.sequential Pattern 2 (Collaborative Single Task) --
+# ONE task owned by the Prediction Modeler (primary). The Modeler has
+# `allow_delegation=True` and three peers (User Profiler, Item Analyst,
+# Calibrator) whose `allow_delegation=False`. It asks each peer targeted
+# questions via CrewAI's built-in delegation, then synthesises the final
+# prediction. Hub-and-spoke pattern from the professor's PDF.
+collaborative_predict_task:
+  description: >
+    You are the primary agent. Your job is to predict what star rating and
+    review text user_id={user_id} will write for item_id={item_id}.
+
+    You have three colleagues on your team you may delegate questions to:
+    - User Profiler (knows the user's rating history, writing style, and
+      elite status)
+    - Item Analyst (knows the business's categories, price range, location,
+      and can search historical reviews for more context)
+    - User Rating Calibration Specialist (retrieves the user's most extreme
+      past reviews to counteract regression-to-mean)
+
+    WORKFLOW:
+    1. Delegate a targeted question to the User Profiler for the user's
+       profile summary.
+    2. Delegate a targeted question to the Item Analyst for the business's
+       profile summary.
+    3. Delegate a targeted question to the Calibration Specialist for the
+       expected_range and most_likely_rating.
+    4. Synthesise the three responses into a prediction. The stars MUST
+       fall inside the expected_range from step 3.
+    5. Your FINAL ANSWER must be a plain JSON object (no markdown, no
+       fences) with exactly two fields: `stars` (1.0-5.0) and `review`
+       (text in the user's voice).
+  expected_output: >
+    A plain JSON object, e.g.
+    {"stars": 4.0, "review": "Great spot, friendly service, a bit noisy..."}
+  agent: prediction_modeler
+
 predict_review_task:
   description: >
     You will receive a user profile report and a business evaluation report from your colleagues.
@@ -33,6 +258,62 @@ predict_review_task:
     2. Write the review in the user's typical vocabulary and style.
     3. Your ENTIRE response must be ONLY a valid JSON object with exactly two fields.
     4. Do not include any text, markdown, or explanation outside the JSON object.
+    5. If the item profile says "Item data unavailable", you MUST NOT name any
+       specific dish, cuisine, city, or business. Write a short, generic review
+       in the user's style (e.g., "Decent spot, roughly what I expected.") and
+       pick stars equal to the user's average_stars rounded to the nearest 0.5.
+    6. If the user profile says "User data unavailable", set stars to 3.75 and
+       write a single neutral sentence.
+
+    Required output format:
+    {"stars": <number 1.0-5.0>, "review": "<review text>"}
+  expected_output: >
+    A valid JSON object with exactly two fields: "stars" (a number from 1.0 to 5.0)
+    and "review" (a string containing the predicted review text).
+    Example: {"stars": 4.0, "review": "Great food, friendly staff, a bit noisy..."}
+  agent: prediction_modeler
+
+# --- Flow variant: same prediction task but receives both reports as explicit inputs,
+# because in a Flow we pass state between nodes instead of relying on CrewAI's
+# automatic task-to-task context chaining.
+predict_review_task_flow:
+  description: >
+    You will receive a user profile report, a business evaluation report, and
+    a calibration report prepared by the Calibrator agent. Synthesize all
+    three to predict what star rating and review text this specific user
+    would write for this specific business.
+
+    USER PROFILE REPORT:
+    {user_profile_report}
+
+    BUSINESS EVALUATION REPORT:
+    {item_profile_report}
+
+    CALIBRATION REPORT (rating prior — TRUST THIS):
+    {calibration_report}
+
+    Critical rules:
+    1. If the CALIBRATION REPORT provides an `expected_range` and
+       `most_likely_rating`, YOUR PREDICTED STARS MUST FALL INSIDE THE
+       expected_range. Default to `most_likely_rating` unless the business
+       evaluation gives clear evidence to move within the range. This rule
+       directly fixes the regression-to-mean failure diagnosed in §8.6:
+       do NOT hedge to 3.75 when the Calibrator tells you this user's range
+       is 1.5-3.0.
+    2. Calibrate the star rating to the USER's personal rating tendencies
+       (use their average_stars and the calibration report, not the business
+       overall average).
+    3. Write the review in the user's typical vocabulary and style.
+    4. Your ENTIRE response must be ONLY a valid JSON object with exactly
+       two fields.
+    5. Do not include any text, markdown, or explanation outside the JSON.
+    6. If the BUSINESS EVALUATION REPORT says "Item data unavailable", you
+       MUST NOT name any specific dish, cuisine, city, or business. Write a
+       short, generic review in the user's style and pick stars equal to
+       the `most_likely_rating` from the calibration report, or the user's
+       average_stars rounded to the nearest 0.5 if calibration is unavailable.
+    7. If the CALIBRATION REPORT says "Calibration unavailable", fall back to
+       the user's average_stars (or 3.75 if that is also missing).
 
     Required output format:
     {"stars": <number 1.0-5.0>, "review": "<review text>"}
