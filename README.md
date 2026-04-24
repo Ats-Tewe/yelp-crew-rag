@@ -155,8 +155,6 @@ User and item profiling run **in parallel**, cutting wall-clock time ~50%.
 ---
 
 ## Known Limitations
-
-- **~45% cold-start users** — no record in `filtered_user.json` → forced `stars=3.75` + neutral review.
 - **Minimax hedges to 3.75** — small-model regression-to-mean bias; stronger base models or OpenEvolve calibration (Milestone 2) will address this.
 - **Nvidia free-tier pacing** — 10s inter-row sleep; set `INTER_ROW_SLEEP_SEC=0` on paid tiers.
 
