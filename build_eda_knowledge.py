@@ -1,15 +1,4 @@
-"""Compute exploratory-data-analysis statistics over the Yelp training set and
-write the result as docs/EDA_Knowledge.md — a StringKnowledgeSource-ready
-Markdown document that agents can consult at inference time.
-
-The goal of this knowledge source is to attack the regression-to-mean failure
-mode documented in §8.6 of the Milestone 1 report: the Prediction Modeler
-defaulted to 3.5-4.0 stars even when the user's history should have pushed the
-prediction to the extremes. Telling the agent what the global distribution
-actually looks like — and how star-length correlates with rating — should
-nudge it toward more confident extreme predictions.
-
-Regenerate with: `uv run python build_eda_knowledge.py`.
+"""Regenerate with: `uv run python build_eda_knowledge.py`.
 """
 from __future__ import annotations
 

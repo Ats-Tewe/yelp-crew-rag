@@ -31,7 +31,7 @@ item_analyst:
 # Calibrator — the Lab Task 4 "researcher" agent. Its job is to attack the
 # regression-to-mean failure diagnosed in §8.6 of the Milestone 1 report by
 # fetching the user's MOST EXTREME past reviews (top by |stars − user_avg|)
-# from the instructor's chroma_index, then deriving a calibrated rating prior
+# from the chroma_index, then deriving a calibrated rating prior
 # (expected range, confidence, list of signals). Runs BETWEEN profile_user
 # and predict in the Flow.
 calibrator:

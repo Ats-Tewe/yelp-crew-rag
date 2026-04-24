@@ -10,7 +10,6 @@ are skipped. Use --limit to cap how many of the FIRST N test rows we consider.
 Usage:
     uv run first_crew                # default: first 5 rows (smoke test)
     uv run first_crew --limit 50     # Milestone 1 mini-dataset
-    uv run first_crew --limit 198    # full test subset
 """
 
 from __future__ import annotations

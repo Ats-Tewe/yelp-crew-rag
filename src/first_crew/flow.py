@@ -143,7 +143,7 @@ class ReviewPredictionFlow(Flow[ReviewPredictionState]):
 
     @listen(profile_user)
     def calibrate_user(self):
-        """Lab Task 4 — new agent. Runs after profile_user, in parallel with
+        """new agent. Runs after profile_user, in parallel with
         profile_item. If CALIBRATOR_ENABLED=0, or the user is cold-start, it
         writes a sentinel string and returns without an LLM call.
         """

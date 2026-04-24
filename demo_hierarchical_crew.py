@@ -1,4 +1,4 @@
-"""Lab Task 2 demo — run a ONE-row prediction through a Process.hierarchical
+"""A ONE-row prediction through a Process.hierarchical
 crew with an explicit Manager Agent.
 
 Difference from Pattern-2:

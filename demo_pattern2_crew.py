@@ -1,4 +1,4 @@
-"""Lab Task 1 demo — run a ONE-row prediction through a Process.sequential
+"""A ONE-row prediction through a Process.sequential
 Pattern-2 (Collaborative Single Task / hub-and-spoke) crew.
 
 Difference from the Flow-based main.py:
