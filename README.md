@@ -189,6 +189,18 @@ assignment_1/
 
 ---
 
+
+## 🚀 Future Work (Milestone 2)
+
+- [ ] Evaluate with a larger model (minimax-m2, Sonnet-4.5) and compare regression-to-mean rate
+- [ ] Add user-side RAG (top-k similar users for cold-start rows)
+- [ ] Integrate the official AgentSocietyChallenge simulator + full training set
+- [ ] OpenEvolve prompt optimisation targeting `calibrate_user_task_flow` and `predict_review_task_flow`
+- [ ] Automated regression tests for the deterministic layer (`get_user_extreme_reviews`, `_extract_json`, metric computation)
+
+---
+
+
 ## Tech Stack
 
 | Component | Choice |
