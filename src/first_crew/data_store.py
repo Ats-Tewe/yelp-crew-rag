@@ -1,3 +1,4 @@
+"."
 """In-memory primary-key indexes over the Yelp subsets.
 
 Replaces the JSONSearchTool RAG pattern. For retrieving a user or item by ID,

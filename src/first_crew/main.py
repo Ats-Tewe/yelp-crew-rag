@@ -1,3 +1,4 @@
+"."
 """Batch runner for the Yelp review-prediction Flow.
 
 Reads rows from data/test_review_subset.json, runs ReviewPredictionFlow for each

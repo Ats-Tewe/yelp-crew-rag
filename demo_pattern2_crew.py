@@ -1,3 +1,4 @@
+"Pattern-2 Crew: Collaborative Single Task (hub-and-spoke)"
 """A ONE-row prediction through a Process.sequential
 Pattern-2 (Collaborative Single Task / hub-and-spoke) crew.
 

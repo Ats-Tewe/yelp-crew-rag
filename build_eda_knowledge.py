@@ -1,3 +1,4 @@
+"."
 """Regenerate with: `uv run python build_eda_knowledge.py`.
 """
 from __future__ import annotations
